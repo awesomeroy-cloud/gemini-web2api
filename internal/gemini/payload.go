@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/url"
+	"strings"
 	"time"
 
 	"github.com/ikhsan3adi/gemini-web2api/internal/config"
@@ -39,13 +40,13 @@ func applyPersistenceFlags(inner []any, cfg config.Config) {
 // - Index 45: Additional persistence flag (1 when temporary)
 // - Index 59: Request UUID
 // - Index 79: Target model mode ID
-func BuildBody(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any, cfg config.Config) string {
+func BuildBody(prompt string, modelID, thinkMode int, fileRefs []FileRef, extra map[int]any, cfg config.Config) string {
 	inner := make([]any, GeminiPayloadSize)
 
 	if len(fileRefs) > 0 {
 		refs := make([]any, len(fileRefs))
 		for i, ref := range fileRefs {
-			refs[i] = []any{nil, nil, ref}
+			refs[i] = bindFileRef(ref)
 		}
 		inner[0] = []any{prompt, 0, nil, refs, nil, nil, 0}
 	} else {
@@ -104,4 +105,38 @@ func BuildURL(cfg config.Config, blOverride string) string {
 		bl,
 		reqid,
 	)
+}
+
+// FileRef is a Scotty upload path plus the MIME the conversation must bind.
+type FileRef struct {
+	Path string
+	MIME string
+	Name string
+}
+
+// bindFileRef is the tuple StreamGenerate accepts.
+// [null, null, path] uploads successfully and then returns BardErrorInfo 1003.
+// Kind is 1 for images, 2 for video, and 3 for every other file.
+func bindFileRef(ref FileRef) []any {
+	name := ref.Name
+	if name == "" {
+		name = "file"
+	}
+	mime := ref.MIME
+	if mime == "" {
+		mime = "application/octet-stream"
+	}
+	kind := 3
+	switch {
+	case strings.HasPrefix(mime, "image/"):
+		kind = 1
+	case strings.HasPrefix(mime, "video/"):
+		kind = 2
+	}
+	return []any{
+		[]any{ref.Path, kind, nil, mime},
+		name,
+		nil, nil, nil, nil, nil, nil,
+		[]any{0},
+	}
 }

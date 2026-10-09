@@ -335,3 +335,23 @@ func TestResponsesInputToMessagesMultiPartText(t *testing.T) {
 		t.Errorf("Got content %q, want %q", userContent, expected)
 	}
 }
+
+func TestFileFromPartPDF(t *testing.T) {
+	part := map[string]any{
+		"type": "file",
+		"file": map[string]any{
+			"filename":  "note.pdf",
+			"file_data": "data:application/pdf;base64,JVBERg==",
+		},
+	}
+	img, ok := FileFromPart(part)
+	if !ok {
+		t.Fatal("FileFromPart should accept file.file_data")
+	}
+	if img.MIME != "application/pdf" || img.Name != "note.pdf" {
+		t.Fatalf("got mime %q name %q", img.MIME, img.Name)
+	}
+	if string(img.Data) != "%PDF" {
+		t.Fatalf("data = %q", img.Data)
+	}
+}

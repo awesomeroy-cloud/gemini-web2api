@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 
 	"github.com/ikhsan3adi/gemini-web2api/internal/format"
 	"github.com/ikhsan3adi/gemini-web2api/internal/gemini"
@@ -91,13 +92,13 @@ func writeSSEDone(w http.ResponseWriter) error {
 	return nil
 }
 
-func (a *App) uploadImages(images []format.Image) ([]string, error) {
+func (a *App) uploadImages(images []format.Image) ([]gemini.FileRef, error) {
 	if len(images) == 0 {
 		return nil, nil
 	}
 
 	tokens := a.Tokens.Get()
-	var fileRefs []string
+	var fileRefs []gemini.FileRef
 
 	var requester gemini.Requester = a.Gem.HTTP
 	if requester == nil {
@@ -127,10 +128,14 @@ func (a *App) uploadImages(images []format.Image) ([]string, error) {
 			return nil, fmt.Errorf("image %d has no data", i)
 		}
 
-		// Detect MIME from magic bytes if not set or generic.
 		mime := img.MIME
-		if mime == "" || mime == "image/png" {
+		if len(data) >= 5 && string(data[:5]) == "%PDF-" {
+			mime = "application/pdf"
+		} else if mime == "" || strings.HasPrefix(mime, "image/") {
 			mime = multimodal.DetectImageMime(data)
+		}
+		if mime == "" {
+			mime = "application/octet-stream"
 		}
 
 		ref, err := multimodal.UploadImage(requester, tokens, data, mime, a.Gem.Cookies, a.Cfg.AuthUser)
@@ -140,7 +145,7 @@ func (a *App) uploadImages(images []format.Image) ([]string, error) {
 		if ref == "" {
 			return nil, fmt.Errorf("image %d upload returned empty reference", i)
 		}
-		fileRefs = append(fileRefs, ref)
+		fileRefs = append(fileRefs, gemini.FileRef{Path: ref, MIME: mime, Name: img.Name})
 	}
 
 	if len(fileRefs) == 0 {

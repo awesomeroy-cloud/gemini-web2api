@@ -13,6 +13,7 @@ import (
 type Image struct {
 	Data []byte
 	MIME string
+	Name string
 	URL  string // Remote URL passthrough (when data not yet fetched)
 }
 
@@ -128,7 +129,11 @@ func GoogleContentsToPrompt(req models.GoogleGenerateRequest) (string, []Image, 
 				}
 				if dec, err := base64.StdEncoding.DecodeString(p.InlineData.Data); err == nil {
 					images = append(images, Image{Data: dec, MIME: mime})
-					msgParts = append(msgParts, "[Image attached]")
+					label := "[File attached]"
+					if strings.HasPrefix(mime, "image/") {
+						label = "[Image attached]"
+					}
+					msgParts = append(msgParts, label)
 				}
 			} else if p.FunctionCall != nil {
 				args := p.FunctionCall.Args

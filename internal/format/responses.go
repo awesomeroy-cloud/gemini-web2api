@@ -119,6 +119,10 @@ func ResponsesInputToMessages(input any, instructions string) ([]map[string]any,
 									hasImage = true
 									break
 								}
+								if _, ok := FileFromPart(cMap); ok {
+									hasImage = true
+									break
+								}
 							}
 						}
 						if !hasImage {

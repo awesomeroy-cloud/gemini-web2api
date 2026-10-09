@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ikhsan3adi/gemini-web2api/internal/format"
+	"github.com/ikhsan3adi/gemini-web2api/internal/gemini"
 	"github.com/ikhsan3adi/gemini-web2api/internal/models"
 )
 
@@ -89,7 +90,7 @@ func (a *App) handleResponses(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Upload images to Gemini storage.
-	var fileRefs []string
+	var fileRefs []gemini.FileRef
 	if len(images) > 0 {
 		fileRefs, err = a.uploadImages(images)
 		if err != nil {

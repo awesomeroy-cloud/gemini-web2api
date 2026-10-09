@@ -56,3 +56,19 @@ func TestBuildURLWithBLOverride(t *testing.T) {
 		t.Errorf("BuildURL with override should use override, got %s", url2)
 	}
 }
+
+func TestBindFileRef(t *testing.T) {
+	got := bindFileRef(FileRef{Path: "/contrib_service/ttl_1d/abc", MIME: "application/pdf", Name: "doc.pdf"})
+	head, ok := got[0].([]any)
+	if !ok || head[0] != "/contrib_service/ttl_1d/abc" || head[1] != 3 || head[3] != "application/pdf" {
+		t.Fatalf("binding head = %#v", got[0])
+	}
+	if got[1] != "doc.pdf" {
+		t.Fatalf("name = %#v", got[1])
+	}
+	img := bindFileRef(FileRef{Path: "/x", MIME: "image/png"})
+	head = img[0].([]any)
+	if head[1] != 1 {
+		t.Fatalf("image kind = %#v", head[1])
+	}
+}

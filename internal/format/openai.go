@@ -182,6 +182,76 @@ func ImageFromPart(mapItem map[string]any) (Image, bool) {
 	return Image{}, false
 }
 
+// FileFromPart parses OpenAI file, input_file, and document parts.
+// file.file_data and source.data may be raw base64 or a data URL.
+func FileFromPart(mapItem map[string]any) (Image, bool) {
+	iType, _ := mapItem["type"].(string)
+	switch iType {
+	case "file", "input_file", "document":
+	default:
+		return Image{}, false
+	}
+
+	name, _ := mapItem["filename"].(string)
+	mime := partMime(mapItem)
+	raw := ""
+	if f, ok := mapItem["file"].(map[string]any); ok {
+		if name == "" {
+			name, _ = f["filename"].(string)
+		}
+		if mime == "" {
+			mime = partMime(f)
+		}
+		if s, _ := f["file_data"].(string); s != "" {
+			raw = s
+		} else if s, _ := f["url"].(string); s != "" {
+			raw = s
+		}
+	}
+	if raw == "" {
+		if s, _ := mapItem["file_data"].(string); s != "" {
+			raw = s
+		}
+	}
+	if src, ok := mapItem["source"].(map[string]any); ok {
+		if mime == "" {
+			if s, _ := src["media_type"].(string); s != "" {
+				mime = s
+			}
+		}
+		if raw == "" {
+			if s, _ := src["data"].(string); s != "" {
+				raw = s
+			} else if s, _ := src["url"].(string); s != "" {
+				raw = s
+			}
+		}
+	}
+	img, ok := attachmentFromRaw(raw, mime)
+	if !ok {
+		return Image{}, false
+	}
+	img.Name = name
+	return img, true
+}
+
+func attachmentFromRaw(raw, mime string) (Image, bool) {
+	if raw == "" {
+		return Image{}, false
+	}
+	if strings.HasPrefix(raw, "data:") || strings.HasPrefix(raw, "http://") || strings.HasPrefix(raw, "https://") {
+		return imageFromURLString(raw, mime)
+	}
+	decoded, err := multimodal.DecodeBase64Raw(raw)
+	if err != nil {
+		return Image{}, false
+	}
+	if mime == "" {
+		mime = "application/octet-stream"
+	}
+	return Image{Data: decoded, MIME: mime}, true
+}
+
 // BuildToolChoiceInstruction returns a prompt suffix based on the tool_choice parameter.
 func BuildToolChoiceInstruction(toolChoice any) string {
 	if strChoice, ok := toolChoice.(string); ok {
@@ -274,6 +344,9 @@ func MessagesToPrompt(req models.OpenAIChatRequest) (string, []Image, error) {
 					} else if img, ok := ImageFromPart(mapItem); ok {
 						images = append(images, img)
 						textParts = append(textParts, "[Image attached]")
+					} else if img, ok := FileFromPart(mapItem); ok {
+						images = append(images, img)
+						textParts = append(textParts, "[File attached]")
 					}
 				} else if s, ok := item.(string); ok && s != "" {
 					textParts = append(textParts, s)

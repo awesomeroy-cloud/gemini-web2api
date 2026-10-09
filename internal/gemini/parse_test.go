@@ -20,3 +20,11 @@ func TestIsBardError(t *testing.T) {
 		t.Errorf("IsBardError got (%q, %t), want (\"1024\", true)", code, ok)
 	}
 }
+
+func TestIsBardErrorQuoted(t *testing.T) {
+	raw := `["type.googleapis.com/assistant.boq.bard.application.BardErrorInfo",[1003]]`
+	code, ok := IsBardError(raw)
+	if code != "1003" || !ok {
+		t.Errorf("quoted BardErrorInfo got (%q, %t)", code, ok)
+	}
+}

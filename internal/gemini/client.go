@@ -176,7 +176,7 @@ func (c *Client) triageStatus(resp *http.Response) error {
 	return nil
 }
 
-func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any) (string, error) {
+func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []FileRef, extra map[int]any) (string, error) {
 	bodyStr := BuildBody(prompt, modelID, thinkMode, fileRefs, extra, c.Cfg)
 	reqURL := BuildURL(c.Cfg, c.CurrentBL())
 	headers := c.buildHeaders()
@@ -233,7 +233,7 @@ func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []stri
 	return "", lastErr
 }
 
-func (c *Client) GenerateStream(prompt string, modelID, thinkMode int, fileRefs []string, extra map[int]any, emit func(string) error) error {
+func (c *Client) GenerateStream(prompt string, modelID, thinkMode int, fileRefs []FileRef, extra map[int]any, emit func(string) error) error {
 	bodyStr := BuildBody(prompt, modelID, thinkMode, fileRefs, extra, c.Cfg)
 	reqURL := BuildURL(c.Cfg, c.CurrentBL())
 	headers := c.buildHeaders()
