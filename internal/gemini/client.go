@@ -177,6 +177,14 @@ func (c *Client) triageStatus(resp *http.Response) error {
 }
 
 func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []FileRef, extra map[int]any) (string, error) {
+	turn, err := c.GenerateTurn(prompt, modelID, thinkMode, fileRefs, extra)
+	if err != nil {
+		return "", err
+	}
+	return turn.Text, nil
+}
+
+func (c *Client) GenerateTurn(prompt string, modelID, thinkMode int, fileRefs []FileRef, extra map[int]any) (Turn, error) {
 	bodyStr := BuildBody(prompt, modelID, thinkMode, fileRefs, extra, c.Cfg)
 	reqURL := BuildURL(c.Cfg, c.CurrentBL())
 	headers := c.buildHeaders()
@@ -186,7 +194,7 @@ func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []File
 	for attempt := 0; attempt < c.Cfg.RetryAttempts; attempt++ {
 		req, err := http.NewRequest("POST", reqURL, strings.NewReader(bodyStr))
 		if err != nil {
-			return "", err
+			return Turn{}, err
 		}
 		req.Header = headers.Clone()
 
@@ -214,11 +222,11 @@ func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []File
 				if err != nil {
 					lastErr = &UpstreamError{Kind: "transport", Msg: err.Error()}
 				} else {
-					text, err := ExtractResponseText(string(rawBytes))
+					turn, err := ExtractTurn(string(rawBytes))
 					if err != nil {
 						lastErr = &UpstreamError{Kind: "bard", Msg: err.Error()}
 					} else {
-						return text, nil
+						return turn, nil
 					}
 				}
 			}
@@ -230,7 +238,7 @@ func (c *Client) Generate(prompt string, modelID, thinkMode int, fileRefs []File
 		}
 	}
 
-	return "", lastErr
+	return Turn{}, lastErr
 }
 
 func (c *Client) GenerateStream(prompt string, modelID, thinkMode int, fileRefs []FileRef, extra map[int]any, emit func(string) error) error {
