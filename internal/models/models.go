@@ -23,11 +23,6 @@ var MODELS = map[string]Model{
 		Think: 4,
 		Desc:  "Flash mode 1. The web response name is parsed separately and is not this label.",
 	},
-	"gemini-3.1-flash-image": {
-		Mode:  1,
-		Think: 4,
-		Desc:  "Image generation on Flash mode 1. Google picks the image generator in the response.",
-	},
 	"gemini-3.7-flash": {
 		Mode:  1,
 		Think: 4,
